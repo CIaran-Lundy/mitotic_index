@@ -13,7 +13,10 @@ data will be accessed from:
 https://springernature.figshare.com/articles/dataset/c4b95da36e32993289cb_svs_-_Whole_slide_image_of_canine_mammary_carcinoma/12186612
 
 
-having read: *A unified framework for tumor proliferation score prediction in breast histopathology* 
+having read: 
+*A unified framework for tumor proliferation score prediction in breast histopathology* 
+*https://ysbecca.github.io/programming/2018/05/22/py-wsi.html*
+
 
 i will do the following:
 
