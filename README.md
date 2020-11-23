@@ -11,3 +11,14 @@ to achieve this, computer vision techniques will need to be implemented in at le
 
 data will be accessed from:
 https://springernature.figshare.com/articles/dataset/c4b95da36e32993289cb_svs_-_Whole_slide_image_of_canine_mammary_carcinoma/12186612
+
+
+having read: *A unified framework for tumor proliferation score prediction in breast histopathology* 
+
+i will do the following:
+
+- identify tissue blobs using Otsu’s method, and binary dilation
+
+- extract patches corresponding to 10 consecutive high power fields (HPFs) region, an area of approximately 2mm^2
+	- microscope used affects size of area to sample: microscope is: https://med.virginia.edu/biomolecular-analysis-facility/services/shared-instrumentation/aperio-scanscope-slide-scanner/
+- 
