@@ -17,11 +17,30 @@ having read:
 *A unified framework for tumor proliferation score prediction in breast histopathology* 
 *https://ysbecca.github.io/programming/2018/05/22/py-wsi.html*
 
-
 i will do the following:
 
-- identify tissue blobs using Otsu’s method, and binary dilation
+ - identify tissue blobs on the slide
 
-- extract patches corresponding to 10 consecutive high power fields (HPFs) region, an area of approximately 2mm^2
-	- microscope used affects size of area to sample: microscope is: https://med.virginia.edu/biomolecular-analysis-facility/services/shared-instrumentation/aperio-scanscope-slide-scanner/
-- 
+ - identify Regions of interest where there are likely to be mitotic cells
+
+ - identify mitotic cells with a CNN
+`
+by using the following steps:
+
+ - load svs
+
+ - tile svs with py_wsi
+
+ - threshold tiles with cv2
+
+ - keep tiles with >90% tile coverage by tissue
+
+ - for all kept tiles, go UP a few levels (i.e. go from level 10 to 17) to increase tile resolution
+
+ -  tile the high res kept tiles to reduce size of object being handled
+
+ -  use cell profiler to estimate cell density, and select top ~30 most dense tiles on whole slide
+
+ - normalize tiles with respect to staining
+
+ - use these tiles to find mitotic events with CNN
