@@ -23,6 +23,7 @@ data_dir = "/home/ciaran/PycharmProjects/mitotic_index/training_aperio/A03/mitos
 image_format = "jpg"
 metadata_format = "csv"
 metadata_delimiter = ","
+lmdb_dir = "/home/ciaran/PycharmProjects/mitotic_index/training_aperio/A03/mitosis/lmdb_dir"
 
 if not image_format.startswith('.'):
     image_format = '.' + image_format
@@ -46,7 +47,7 @@ class CIFAR_Image:
         return image.reshape(*self.size, self.channels)
 
 
-def store_single_lmdb(image, image_id, label):
+def store_single_lmdb(image, image_id, label, lmdb_dir):
     """ Stores a single image to a LMDB.
         Parameters:
         ---------------
@@ -54,9 +55,7 @@ def store_single_lmdb(image, image_id, label):
         image_id    integer unique ID for image
         label       image label
     """
-
     map_size = image.nbytes * 1000
-    lmdb_dir = "/home/ciaran/PycharmProjects/mitotic_index/training_aperio/A03/mitosis/lmdb_dir"
     # Create a new LMDB environment
     env = lmdb.open(str(lmdb_dir + '/' + "single_lmdb"), map_size=map_size)
     # Start a new write transaction
@@ -67,6 +66,31 @@ def store_single_lmdb(image, image_id, label):
         txn.put(key.encode("ascii"), pickle.dumps(value))
     #print(env.stat())
     env.close()
+
+
+def read_single_lmdb(image_id, lmdb_dir):
+    """ Stores a single image to LMDB.
+        Parameters:
+        ---------------
+        image_id    integer unique ID for image
+        Returns:
+        ----------
+        image       image array, (32, 32, 3) to be stored
+        label       associated meta data, int label
+    """
+    # Open the LMDB environment
+    env = lmdb.open(str(lmdb_dir + '/' + "single_lmdb"), readonly=True)
+    # Start a new read transaction
+    with env.begin() as txn:
+        # Encode the key the same way as we stored it
+        data = txn.get(f"{image_id:08}".encode("ascii"))
+        # Remember it's a CIFAR_Image object that is loaded
+        cifar_image = pickle.loads(data)
+        # Retrieve the relevant bits
+        image = cifar_image.get_image()
+        label = cifar_image.label
+    env.close()
+    return image, label
 
 
 def get_files(data_dir, image_format, metadata_format):
@@ -124,7 +148,7 @@ def create_image_database_method_1(images_and_metadata, metadata_delimiter, data
 
 images_and_metadata = get_files(data_dir, image_format, metadata_format)
 create_image_database_method_1(images_and_metadata, metadata_delimiter, data_dir)
-
+read_single_lmdb("A03_00Cb_mitosis.jpg", lmdb_dir)
 
 def get_files_method_2(data_dir, image_format, metadata_format):
     """find all image files of a specified file format in a specified data directory,
