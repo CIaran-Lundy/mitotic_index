@@ -11,16 +11,18 @@
 #NOW YOU HAVE A TRAINING DATASET
 
 # train a ResNet style
-
+import tensorflow as tf
 import os
 import cv2
 import csv
 import lmdb
 import pickle
 import numpy as np
-
-data_dir = "/home/ciaran/PycharmProjects/mitotic_index/training_aperio/A03/mitosis"
-image_format = "jpg"
+import pandas as pd
+import itertools
+metadata_dir = "/home/ciaran/PycharmProjects/mitotic_index/training_aperio/A03/mitosis/"
+images_dir = "/home/ciaran/PycharmProjects/mitotic_index/training_aperio/A03/frames/x40/"
+image_format = "tiff"
 metadata_format = "csv"
 metadata_delimiter = ","
 lmdb_dir = "/home/ciaran/PycharmProjects/mitotic_index/training_aperio/A03/mitosis/lmdb_dir"
@@ -83,111 +85,63 @@ def read_single_lmdb(image_id, lmdb_dir):
     # Start a new read transaction
     with env.begin() as txn:
         # Encode the key the same way as we stored it
-        data = txn.get(f"{image_id:08}".encode("ascii"))
+        data = txn.get(image_id.encode("ascii"))
         # Remember it's a CIFAR_Image object that is loaded
         cifar_image = pickle.loads(data)
         # Retrieve the relevant bits
         image = cifar_image.get_image()
         label = cifar_image.label
+        #cv2.imshow(winname="test_image", mat=image)
+        #cv2.waitKey(0)
     env.close()
+    #txn.drop(env)
     return image, label
 
 
-def get_files(data_dir, image_format, metadata_format):
+def get_files(metadata_dir, images_dir, image_format, metadata_format):
     """find all image files of a specified file format in a specified data directory,
     and pair them into a dictionary structure with metadata files that share the same
      basename, and have the specified file format"""
-    all_files = set(os.listdir(data_dir))
+    all_metadata_files = [x for x in set(os.listdir(metadata_dir)) if x.endswith(metadata_format)]
+    all_image_files = [x for x in set(os.listdir(images_dir)) if x.endswith(image_format)]
     images_and_metadata = {}
-    for file in all_files:
-        if file.endswith(image_format):
-            try:
-                metadata = file.split('.')[0] + metadata_format
-                os.path.exists(metadata)
-                images_and_metadata[file] = metadata
-            except:
-                print("{file} - file has no metadata")
+    for metadata, image in itertools.product(all_metadata_files, all_image_files):
+        if image.split('.')[0] in metadata:
+                images_and_metadata[metadata] = image
     return images_and_metadata
 
 
-def create_image_database_method_1(images_and_metadata, metadata_delimiter, data_dir):
+def create_cropped_image_database(images_and_metadata, metadata_delimiter, metadata_dir, images_dir, lmdb_dir):
     """read image files, crop based on metadata, store in a LMDB"""
-    working_directory = os.getcwd()
-    os.chdir(data_dir)
     passed_metadata_files_counter = 0
     empty_metadata_files_counter = 0
-    for image_name, metadata in images_and_metadata.items():
-        image = cv2.imread(image_name)
-        metadata = open(metadata).read().split('\n')
-        store_single_lmdb(image, image_name, metadata)
+    for metadata_name, image_name in images_and_metadata.items():
+        image = cv2.imread(images_dir+image_name)
+        metadata = open(metadata_dir+metadata_name).read().split('\n')[:-1]
+        metadata = [x for x in metadata if len(x) > 0]
         for data_point in metadata:
             data_point = data_point.split(metadata_delimiter)
-            try:
-                width = int(10)
-                height = int(10)
-                y_1 = int(data_point[0]) - height
-                y_2 = int(data_point[0]) + height
-
-                x_1 = int(data_point[1]) - width
-                x_2 = int(data_point[1]) + width
-
-                crop_image = image[x_1:x_2, y_1:y_2]
-                #cv2.imshow("Cropped", crop_image)
-                #cv2.waitKey(0)
-                store_single_lmdb(image, image_name, metadata)
+            data_point.append(csv.split("_", 2).split('.'))
+            width = int(16)
+            height = int(16)
+            y_1 = max(0, int(data_point[0]) - height)
+            y_2 = max(0, int(data_point[0]) + height)
+            x_1 = max(0, int(data_point[1]) - width)
+            x_2 = max(0, int(data_point[1]) + width)
+            cropped_image = image[x_1:x_2, y_1:y_2]
+            if not len(cropped_image) == len(image):
+                store_single_lmdb(cropped_image, metadata_name.split('.')[0], data_point, lmdb_dir)
                 passed_metadata_files_counter += 1
-            except:
-                if len(data_point) == 1:
-                    empty_metadata_files_counter += 1
-                else:
-                    print(data_point)
+            else:
+                print(len(image))
     print("passed_metadata_files_counter: {}".format(passed_metadata_files_counter))
     print("empty_metadata_files_counter: {}".format(empty_metadata_files_counter))
-    os.chdir(working_directory)
 
 
-images_and_metadata = get_files(data_dir, image_format, metadata_format)
-create_image_database_method_1(images_and_metadata, metadata_delimiter, data_dir)
-read_single_lmdb("A03_00Cb_mitosis.jpg", lmdb_dir)
+#images_and_metadata = get_files(metadata_dir, images_dir, image_format, metadata_format)
+#print("got_files")
+#create_cropped_image_database(images_and_metadata, metadata_delimiter, metadata_dir, images_dir, lmdb_dir)
 
-def get_files_method_2(data_dir, image_format, metadata_format):
-    """find all image files of a specified file format in a specified data directory,
-    and pair them into a dictionary structure with metadata files that share the same
-     basename, and have the specified file format
+file = read_single_lmdb("A03_05Cc_not_mitosis", lmdb_dir)
+print(file)
 
-     do all metadata in a step beofre image loading?"""
-    all_files = set(os.listdir(data_dir))
-    images_and_metadata = {}
-    for file in all_files:
-        if file.endswith(image_format):
-            try:
-                metadata = file.split('.')[0] + metadata_format
-                os.path.exists(metadata)
-                images_and_metadata[file] = metadata
-            except:
-                print("{file} - file has no metadata")
-    return images_and_metadata
-
-def create_image_database_method_2(file, images_and_metadata):
-    """read image files, crop based on metadata, store in a LMDB"""
-    for image, metadata in images_and_metadata.items():
-        image = cv2.imread(image)
-        metadata = csv.read
-        y = 0
-        x = 0
-        h = 300
-        w = 510
-        crop_image = image[x:w, y:h]
-        #cv2.imshow("Cropped", crop_image)
-        #cv2.waitKey(0)
-
-        region_of_interest = 0
-        tag = file.split("_", 2)[-1]
-        print(tag)
-
-#for file in list of files at training_aperio/A03/mitosis/:
-#   get file name
-#   split string
-#   if it contains "not":
-#       add to narp dataset
-#   elif it doesnt contain not:
