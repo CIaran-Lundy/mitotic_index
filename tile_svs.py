@@ -20,8 +20,9 @@
 
 import cv2
 import py_wsi
+import py_wsi.imagepy_toolkit as tk
 import numpy as np
-
+file_name = "c4b95da36e32993289cb.svs"
 file_dir = '/home/ciaran/PycharmProjects/mitotic_index/'
 db_location = '/home/ciaran/PycharmProjects/mitotic_index/'
 xml_dir = file_dir
@@ -31,19 +32,32 @@ db_name = "patch_db"
 # initialise turtle svs manager object
 turtle = py_wsi.Turtle(file_dir, db_location, db_name, xml_dir)
 
+level_count, level_tiles, level_dims = turtle.retrieve_tile_dimensions(file_name=file_name, patch_size=128)
+print("Level count:         " + str(level_count))
+print("Level tiles:         " + str(level_tiles))
+print("Level dimensions:    " + str(level_dims))
+
 # tile svs file(s) found by turtle in file_dir, where:
 #       size of each tile in pixels == patch_size
 #       "resolution" of image == level (higher the more detailed)
 #       overlap between tiles == overlap
 #       number of tiles loaded into memory at any one time == rows_per_txn
-patches = turtle.sample_and_store_patches(patch_size=128, level=11, overlap=12, rows_per_txn=10)
+turtle.sample_and_store_patches(patch_size=128, level=14, overlap=12, rows_per_txn=10)
 # todo: CHANGE THE ABOVE SETTINGS TO BE APPROPRIATE
 #  - should i have the largest patch size and lowest level/resolution i can for the sake of speed?
 #  - should i have patch size == 10 High Power Fields ~= 2mm^2 from the off so that it is inline with B&R grading?
 #  - how does overlap effect things here?
-#  how many images can I get away with having loaded at once? is there even a benefit to maximising this?
+#  - how many images can I get away with having loaded at once? is there even a benefit to maximising this?
 
-#patches = turtle.get_patches_from_file("c4b95da36e32993289cb.svs")
+
+set_id = 0
+total_sets = 1
+patches, coords, classes, labels = turtle.get_set_patches(set_id, total_sets)
+
+#patches, coords, classes, labels = turtle.get_patches_from_file("c4b95da36e32993289cb.svs")
+#turtle.get_patches_from_file("c4b95da36e32993289cb.svs")
+#tk.show_labeled_patches(patches[:10], coords[:10])
+
 exit()
 patch_17 = turtle.retrieve_sample_patch("c4b95da36e32993289cb.svs", 128, 17, overlap=12)
 
