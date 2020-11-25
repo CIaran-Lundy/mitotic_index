@@ -63,7 +63,8 @@ def store_single_lmdb(image, image_id, label, lmdb_dir):
     # Start a new write transaction
     with env.begin(write=True) as txn:
         # All key-value pairs need to be strings
-        value = CIFAR_Image(image, label)
+        #value = CIFAR_Image(image, label)
+        value = (image, label)
         key = image_id
         txn.put(key.encode("ascii"), pickle.dumps(value))
     #print(env.stat())
@@ -87,10 +88,12 @@ def read_single_lmdb(image_id, lmdb_dir):
         # Encode the key the same way as we stored it
         data = txn.get(image_id.encode("ascii"))
         # Remember it's a CIFAR_Image object that is loaded
-        cifar_image = pickle.loads(data)
+        data = pickle.loads(data)
         # Retrieve the relevant bits
-        image = cifar_image.get_image()
-        label = cifar_image.label
+        image = data[0]
+        label = data[1]
+        #image = cifar_image.get_image()
+        #label = cifar_image.label
         #cv2.imshow(winname="test_image", mat=image)
         #cv2.waitKey(0)
     env.close()
@@ -121,7 +124,7 @@ def create_cropped_image_database(images_and_metadata, metadata_delimiter, metad
         metadata = [x for x in metadata if len(x) > 0]
         for data_point in metadata:
             data_point = data_point.split(metadata_delimiter)
-            data_point.append(csv.split("_", 2).split('.'))
+            data_point.append(metadata_name.split("_", 2)[-1].split('.')[0])
             width = int(16)
             height = int(16)
             y_1 = max(0, int(data_point[0]) - height)
@@ -138,9 +141,9 @@ def create_cropped_image_database(images_and_metadata, metadata_delimiter, metad
     print("empty_metadata_files_counter: {}".format(empty_metadata_files_counter))
 
 
-#images_and_metadata = get_files(metadata_dir, images_dir, image_format, metadata_format)
-#print("got_files")
-#create_cropped_image_database(images_and_metadata, metadata_delimiter, metadata_dir, images_dir, lmdb_dir)
+images_and_metadata = get_files(metadata_dir, images_dir, image_format, metadata_format)
+print("got_files")
+create_cropped_image_database(images_and_metadata, metadata_delimiter, metadata_dir, images_dir, lmdb_dir)
 
 file = read_single_lmdb("A03_05Cc_not_mitosis", lmdb_dir)
 print(file)
