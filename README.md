@@ -44,3 +44,12 @@ by using the following steps:
  - normalize tiles with respect to staining
 
  - use these tiles to find mitotic events with CNN
+ 
+ 
+ PARALLELISATION:
+ 
+  - parallel filesystem
+  - parallel image segmenting
+  - parallel training
+    - batching
+  - parallel testing
